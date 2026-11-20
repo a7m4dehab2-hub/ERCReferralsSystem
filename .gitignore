@@ -1,0 +1,12 @@
+*.xlsx
+*.xls
+*.csv
+*.sqlite
+*.sqlite3
+*.db
+.env*
+data/
+backups/
+node_modules/
+erc-backup*.json
+erc-contact-outcomes*.json

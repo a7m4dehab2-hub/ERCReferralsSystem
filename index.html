@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co https://docs.google.com https://*.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>ERC External Referral System</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./vendor/xlsx.full.min.js" defer></script>
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="tooltip" role="tooltip" hidden></div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="detail-dialog"><div class="dialog-heading"><h2 id="dialog-title"></h2><button id="close-dialog" type="button" aria-label="Close">×</button></div><div id="dialog-content"></div></dialog>
+</body>
+</html>

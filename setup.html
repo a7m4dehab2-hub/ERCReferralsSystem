@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ERC — Setup instructions</title><link rel="stylesheet" href="./styles.css"></head>
+<body><main class="setup-guide"><img class="erc-logo" src="./assets/erc-logo.webp" alt="Egyptian Red Crescent"><h1>Set up your ERC workspace</h1><p>This application starts empty. Configuration is managed by your administrator in the website files, rather than through a Connect button on staff screens.</p>
+<h2>1. Prepare Supabase</h2><ol><li>Create a new project in <a href="https://supabase.com/dashboard">Supabase</a>.</li><li>In SQL Editor, run <strong>supabase/001_install.sql</strong> from the full application package. For an existing 0.2.0 installation, run <strong>003_contact_outcomes_upgrade.sql</strong> instead. Existing 0.3.0 databases need no schema change.</li><li>In Authentication → Users, create your email/password account.</li><li>Edit <strong>002_add_members.sql</strong> with that email and your name, then run it to grant administrator access. Repeat with role <strong>staff</strong> for colleagues.</li></ol>
+<h2>2. Set the public connection settings</h2><p>Find the project URL and publishable key in Supabase's Connect dialog or API Keys settings. Edit the website's <strong>config.json</strong>:</p>
+<pre>{
+  "supabaseUrl": "https://YOUR_PROJECT.supabase.co",
+  "publishableKey": "sb_publishable_YOUR_PUBLIC_KEY"
+}</pre>
+<p>Use only the publishable key. Never put a secret key, service-role key, database password or staff password in this file.</p>
+<h2>3. Publish with GitHub Pages</h2><ol><li>Extract <strong>ERC-GitHub-Pages.zip</strong>.</li><li>Create a new GitHub repository. Upload the extracted files so <strong>index.html</strong> and <strong>config.json</strong> are at the repository root. Keep the <strong>assets</strong> and <strong>vendor</strong> folders.</li><li>Edit <strong>config.json</strong> with the settings above and commit the change.</li><li>Open repository Settings → Pages → Deploy from a branch. Select <strong>main</strong> and <strong>/(root)</strong>, then Save.</li><li>Open the published HTTPS address. Sign in with your staff account.</li></ol>
+<p>Upload only the website ZIP contents. Workbooks, contact exports, database files and backups belong outside the website repository. The publishable key is public configuration; patient access still requires an active staff account.</p>
+<h2>4. Start with an empty workspace</h2><p>After sign-in to a newly installed project, the lists are empty. Import the contact workbook first, worksheet <strong>بيانات التواصل الصحي</strong>, header row <strong>1</strong>. Then import <strong>referal_master_sheet.xlsx → Follow_UP</strong>, header row <strong>6</strong>. Preview, save source rows, and review a small sample before applying the remainder. The full import guide is included in the application package.</p>
+<p>If this setup page keeps appearing, confirm that config.json was edited in the folder actually published by GitHub Pages. Reload after the deployment finishes.</p>
+<p><a href="./index.html">Return to staff sign-in</a></p>
+<p class="caption">References: <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">GitHub Pages setup</a> · <a href="https://supabase.com/docs/guides/getting-started/api-keys">Supabase API keys</a></p>
+</main></body></html>
