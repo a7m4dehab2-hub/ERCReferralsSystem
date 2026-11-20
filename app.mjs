@@ -1,6 +1,6 @@
 import { normalizeId, validId, searchText, matchesDemographics, clean, todayCairo, dateLabel, ageAt, missingDetails, queueMatches, priorityRank, narratives, patientErrors, requestErrors, isOpen } from './domain.mjs';
 import { readData, persist, readPreferences, savePreferences, changeEvents, refreshData } from './store.mjs';
-import { cloudMode, member, initialiseCloud, signIn, signOut, emptyData, restoreCloud } from './cloud.mjs';
+import { cloudMode, member, initialiseCloud, restoreSignIn, signIn, signOut, emptyData, restoreCloud } from './cloud.mjs';
 import { renderImports, resetImports, prepareSheetUpdate } from './import-ui.mjs';
 import { simpleWorkspace, patientPanel } from './simple-ui.mjs';
 import { contactForm, whatsappForm, outcomesView, resetContactUI } from './contact-ui.mjs';
@@ -533,7 +533,11 @@ window.addEventListener('resize', () => { hideHelp(); pinColumns(); });
 window.addEventListener('beforeunload', event => { if (state.editor?.dirty) { event.preventDefault(); event.returnValue = ''; } });
 function workspaceContext(){return {node,action,t,data,state,now,navigate,actor:state.user,language:userPrefs().language,patientFields,requestFields,staffNames,getRows,render,renderFilters,beginEditor,saveEditor,cancelEditor,lookup:lookupPatient,history:showHistory,showDialog,closeDialog:()=>dialog.close(),toast,refresh:refreshData,save:async(next,options)=>{data=await persist(next,options);return data;},panel:(title,content,actions)=>{showDialog(title,content,actions);dialog.classList.add('profile-panel');},contact:(p,r)=>contactForm(workspaceContext(),p,r),whatsapp:(p,number,r)=>whatsappForm(workspaceContext(),p,number,r),edit:(p,r)=>{state.tab=r?(r.progress==='Completed'?'completed':r.progress==='Closed'?'closed':'all'):'patients';state.selected=r?.key||p.key;beginEditor(r?'edit-request':'edit-patient');},addForPatient:p=>{state.tab='all';beginEditor('new-request');state.editor.p=structuredClone(p);state.editor.baseP=structuredClone(p);state.editor.r.patientKey=p.key;render();},setFilters:filters=>{state.tab='all';state.simpleFilters=filters;state.priority='All';state.progress='All';state.notification='All';state.followup='All';render();}};}
 async function start() {
- try { await initialiseCloud(); data=readData(); render(); }
+ try {
+  await initialiseCloud();
+  if(cloudMode)try { await restoreSignIn(); } catch(error) { renderLogin('Unable to restore your sign-in. Check your connection or sign in again. '+error.message);return; }
+  data=readData();state.user=member?.name||'';render();
+ }
  catch(error){renderSetup(error.message);}
 }
 function renderSetup(message='') {

@@ -8,9 +8,17 @@ export async function initialiseCloud() {
   if (cloudMode) {
     validateConfig(config);
     const { createClient } = await import('./vendor/supabase.mjs');
-    client = createClient(config.supabaseUrl, config.publishableKey, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false } });
+    client = createClient(config.supabaseUrl, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
     client.auth.onAuthStateChange((event, value) => { session = value; if(event === 'SIGNED_OUT'){ authEpoch++; snapshot=null; member=null; } });
   }
+}
+export async function restoreSignIn() {
+  const { data, error } = await client.auth.getSession();
+  if (error) throw Error(error.message);
+  session = data.session;
+  // Access and staff membership are checked by the database on every reload.
+  // Only the sign-in session is persisted; workspace records stay in memory.
+  if (session) await loadCloud();
 }
 export function validateConfig(value) {
   const url = new URL(value.supabaseUrl);
