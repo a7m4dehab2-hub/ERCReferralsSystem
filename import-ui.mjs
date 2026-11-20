@@ -1,4 +1,4 @@
-import { autoMapping, findHeader, sheetGrid, importFields, parseRows, digest, classify, isSafe, applySourceRow } from './importer.mjs';
+import { autoMapping, findHeader, sheetGrid, importFields, parseRows, digest, classify, isSafe, applySourceRow, sourceProblems } from './importer.mjs';
 import { normalizeId, clean } from './domain.mjs';
 import { changeEvents } from './store.mjs';
 import { fetchContactSheet } from './sheet-source.mjs';
@@ -23,7 +23,7 @@ export function renderImports(page,ctx){
  const {data,admin,save,refresh,showDialog,closeDialog}=ctx;
  const section=h('section',{class:'import-section'});page.append(section);
  const render=()=>{section.replaceChildren();
-  section.append(h('h2',{text:'Import and source review'}),h('p',{class:'caption',text:'Choose the contact workbook first, then the master workbook’s Follow_UP tab. Files are read on this computer. Nothing is saved until you choose Save source rows.'}));
+  section.append(h('h2',{text:'Import and source review'}),h('p',{class:'caption',text:'1. Choose the contact workbook first, then the master workbook’s Follow_UP tab. 2. Preview and save source rows. 3. Apply unambiguous entries or review each held entry below. Saving source rows alone does not create patient profiles or requests.'}),h('p',{class:'caption',text:'For the prepared private ERC JSON package, use Settings → Backups → Restore backup into empty workspace. This file picker accepts Excel and CSV files.'}));
   const controls=h('div',{class:'toolbar'});
   const file=h('input',{type:'file',accept:'.xlsx,.xls,.csv','aria-label':'Choose Excel file',disabled:!admin||busy,on:{change:async()=>{
    const selected=file.files[0];if(!selected)return;if(selected.size>30*1024*1024){message='Choose a workbook smaller than 30 MB.';return render();}
@@ -127,6 +127,6 @@ export function renderImports(page,ctx){
  function grid(){return sheetGrid(window.XLSX,workbook.Sheets[sheetName],{date1904:!!workbook.Workbook?.WBProps?.date1904});}
  function setupSheet(){headerIndex=Math.max(0,findHeader(grid()));mapping=autoMapping(grid()[headerIndex]||[]);preview=[];}
  function rawDetails(row){return h('div',{},h('p',{text:`${row.source.fileName} / ${row.source.sheet} / row ${row.source.row}`}),h('table',{class:'history-table'},h('tbody',{},row.source.cells.map(cell=>h('tr',{},h('th',{text:`${cell.column}: ${cell.header}`}),h('td',{text:cell.value+(cell.link?'\n'+cell.link:'')}))))));}
- function sourceTable(rows,label,review){return h('div',{class:'dialog-scroll'},h('table',{class:'history-table source-table'},h('thead',{},h('tr',{},['Source row','Patient ID','Patient name','Classification','Actions'].map(text=>h('th',{text})))),h('tbody',{},rows.map(row=>h('tr',{},h('td',{text:`${row.source.sheet}: ${row.source.row}`}),h('td',{text:row.values.id||'Missing ID'}),h('td',{text:row.values.name||'Missing name'}),h('td',{text:label(row)}),h('td',{},button(row.status==='pending'?'Review':'Source details',()=>review(row))))))));}
+ function sourceTable(rows,label,review){return h('div',{class:'dialog-scroll'},h('table',{class:'history-table source-table'},h('thead',{},h('tr',{},['Source row','Patient ID','Patient name','Classification','Warnings / fields to review','Actions'].map(text=>h('th',{text})))),h('tbody',{},rows.map(row=>h('tr',{},h('td',{text:`${row.source.sheet}: ${row.source.row}`}),h('td',{text:row.values.id||'Missing ID'}),h('td',{text:row.values.name||'Missing name'}),h('td',{text:label(row)}),h('td',{text:[...new Set([...(row.issues||[]),...sourceProblems(row,data.patients.find(p=>normalizeId(p.id)===normalizeId(row.values.id)))])].join('; ')||'—'}),h('td',{},button(row.status==='pending'?'Review':'Source details',()=>review(row))))))));}
  render();
 }

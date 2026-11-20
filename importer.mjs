@@ -97,21 +97,31 @@ export function classify(row,data,peers=[]){
  if(existing && patientKeys.some(k=>clean(existing[k])&&clean(row.values[k])&&clean(existing[k])!==clean(row.values[k])))return 'Conflicting details — review';
  if(row.kind==='referrals'&&existing&&data.requests.some(r=>r.patientKey===existing.key))return 'Existing requests — choose request';
  if(row.issues.some(issue=>!issue.startsWith('ID needs')))return 'Source values need review';
+ if(sourceProblems(row,existing).length)return 'Source values need review';
  if(row.kind==='contacts'&&existing&&patientKeys.every(k=>!clean(row.values[k])||clean(existing[k])===clean(row.values[k])))return 'Identical profile — skipped';
  return row.kind==='contacts'?(existing?'Fill missing details':'New patient'):'New request — verify details';
 }
 export const isSafe = classification => ['New patient','Fill missing details','New request — verify details'].includes(classification);
+export function sourceProblems(row,existing){
+ const patient={...existing};
+ for(const key of patientKeys)if(clean(row.values[key]))patient[key]=row.values[key];
+ const errors=patientErrors(patient,[],patient.key);
+ const labels={name:'Patient name is required',id:'Patient ID is required',birth:'Birth date must be valid and cannot be in the future',reportedAge:'Reported age must be a number of zero or greater'};
+ const problems=Object.keys(errors).map(key=>labels[key]||key);
+ if(row.kind==='referrals'&&requestErrors({...row.values,source:'Legacy migration',progress:'Under verification'}).reportUrl)problems.push('Report link must be a valid HTTPS address');
+ return problems;
+}
 export function applySourceRow(data,row,{ values=row.values, useFields=patientKeys.filter(k=>clean(values[k])), useRequestFields=Object.keys(values), requestKey='', progress='Under verification', informed='Not informed', outcome='Not confirmed', reason='' }={}) {
  if(row.status==='applied' || data.imports?.find(r=>r.key===row.key)?.status==='applied')throw Error('This source row has already been applied.');
  if(!normalizeId(values.id))throw Error('A supplied ID is required. Keep this row in investigation until it is found.');
  let p=data.patients.find(p=>normalizeId(p.id)===normalizeId(values.id)), previous=p?structuredClone(p):null;
+ if(p)p=structuredClone(p);
  if(!p)p={key:crypto.randomUUID(),version:0,name:'',id:normalizeId(values.id),originalId:row.values.originalId||values.id,phone:'',otherPhone:'',centre:'',building:'',apartment:'',birth:'',reportedAge:'',entryDate:''};
  for(const key of patientKeys) if(useFields.includes(key))p[key]=key==='id'?normalizeId(values[key]):clean(values[key]);
  p.id=normalizeId(values.id);
- const errors=patientErrors(p,data.patients,p.key); if(Object.keys(errors).length)throw Error('Complete the patient name, ID and valid personal dates before applying.');
+ const errors=patientErrors(p,data.patients,p.key); if(Object.keys(errors).length)throw Error('Check these patient fields before applying: '+Object.keys(errors).map(key=>importFields.find(f=>f.key===key)?.label||key).join(', ')+'.');
  if(p.reportedAge&&(!p.ageRecorded||(useFields.includes('reportedAge')&&p.reportedAge!==previous?.reportedAge)))p.ageRecorded=values.ageRecorded||'';
  p.version++;p.updatedAt=new Date().toISOString();p.createdAt ||= p.updatedAt;
- if(previous)data.patients=data.patients.map(value=>value.key===p.key?p:value);else data.patients.push(p);
  let request=null;
  if(row.kind==='referrals'){
   const existingRequests=data.requests.filter(r=>r.patientKey===p.key);
@@ -129,6 +139,7 @@ export function applySourceRow(data,row,{ values=row.values, useFields=patientKe
   if(old)data.requests=data.requests.map(value=>value.key===request.key?request:value);else data.requests.push(request);
   for(const [key,field] of [['hospitals','hospital'],['agencies','agency']])if(request[field]&&!data.settings[key].some(e=>e.name===request[field]))data.settings[key].push({key:crypto.randomUUID(),name:request[field],arabic:''});
  }
+ if(previous)data.patients=data.patients.map(value=>value.key===p.key?p:value);else data.patients.push(p);
  const saved={...row,values,status:'applied',patientKey:p.key,requestKey:request?.key||'',resolvedAt:new Date().toISOString()};
  const existingIndex=(data.imports||=[]).findIndex(r=>r.key===row.key);
  if(existingIndex>=0)data.imports[existingIndex]=saved;else data.imports.push(saved);
