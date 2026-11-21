@@ -1,4 +1,4 @@
-import { autoMapping, findHeader, sheetGrid, importFields, parseRows, digest, classify, isSafe, applySourceRow, sourceProblems } from './importer.mjs';
+import { autoMapping, findHeader, sheetGrid, importFields, parseRows, digest, classify, isSafe, applySourceRow, sourceProblems, applySafeBatch } from './importer.mjs';
 import { normalizeId, clean } from './domain.mjs';
 import { changeEvents } from './store.mjs';
 import { fetchContactSheet } from './sheet-source.mjs';
@@ -40,7 +40,7 @@ export function renderImports(page,ctx){
    controls.append(h('label',{class:'small-label'},'Header row',h('input',{type:'number',min:1,max:50,value:headerIndex+1,'aria-label':'Header row',on:{change:event=>{headerIndex=Math.max(0,Number(event.target.value)-1);mapping=autoMapping(grid()[headerIndex]||[]);preview=[];render();}}})));
   }
   section.append(controls);
-  if(busy)section.append(h('p',{role:'status',text:'Working…'}));
+  if(busy)section.append(h('p',{role:'status','data-import-progress':'',text:'Working…'}));
   if(message)section.append(h('p',{class:'note-box',role:'status',text:message}));
   if(workbook){
    const headers=grid()[headerIndex]||[], fields=kind==='contacts'?importFields.slice(0,12):importFields;
@@ -63,12 +63,17 @@ export function renderImports(page,ctx){
   const safe=pending.filter(row=>isSafe(classify({...row,fingerprint:''},{...data,imports:[]},pending)));
   section.append(button(`Apply ${safe.length} unambiguous entries`,async()=>{
    if(!confirm('Apply unambiguous entries? Imported requests start Under verification. Original statuses and source rows are preserved for review.'))return;
-   busy=true;render();try{
-    const next=await refresh(), before=structuredClone(next);let count=0;
-    const currentPending=next.imports.filter(r=>r.status==='pending');
-    for(const row of currentPending)if(isSafe(classify({...row,fingerprint:''},{...next,imports:[]},currentPending))){applySourceRow(next,row);count++;}
-    addLocalAudit(before,next);next.revision++;await save(next,{reason:'Reviewed bulk import: unambiguous entries; requests held for verification'});message=`Applied ${count} entries. Conflicting or incomplete entries remain pending.`;
-   }catch(error){message=error.message;}finally{busy=false;ctx.rerender();}
+   const allowedKeys=new Set(safe.map(row=>row.key)),epoch=importEpoch;let count=0;
+   busy=true;message='';render();try{
+    let next=await refresh();
+    while(epoch===importEpoch&&section.isConnected){
+     const batch=applySafeBatch(next,{limit:50,allowedKeys});if(!batch)break;
+     next.revision++;next=await save(next,{reason:'Reviewed import batch: unambiguous entries; requests held for verification'});count+=batch;
+     message=`Applied ${count} of ${allowedKeys.size} entries. Each completed batch is saved.`;
+     const progress=section.querySelector('[data-import-progress]');if(progress)progress.textContent=message;
+    }
+    message=`Applied ${count} entries. Conflicting or incomplete entries remain pending.`;
+   }catch(error){message=`Applied ${count} entries before stopping. Completed batches stay saved. Refresh records before retrying. ${error.message}`;}finally{busy=false;ctx.rerender();}
   },busy||!admin||!safe.length));
   const rows=(data.imports||[]).filter(r=>filter==='All'||r.status===filter.toLowerCase());
   section.append(sourceTable(rows, row=>row.status==='pending'?classify({...row,fingerprint:''},{...data,imports:[]},pending):row.status,row=>reviewDialog(row)));
