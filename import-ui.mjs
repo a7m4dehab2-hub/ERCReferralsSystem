@@ -67,8 +67,8 @@ export function renderImports(page,ctx){
    busy=true;message='';render();try{
     let next=await refresh();
     while(epoch===importEpoch&&section.isConnected){
-     const batch=applySafeBatch(next,{limit:50,allowedKeys});if(!batch)break;
-     next.revision++;next=await save(next,{reason:'Reviewed import batch: unambiguous entries; requests held for verification'});count+=batch;
+     const draft=structuredClone(next),batch=applySafeBatch(draft,{limit:50,allowedKeys});if(!batch)break;
+     draft.revision++;next=await save(draft,{reason:'Reviewed import batch: unambiguous entries; requests held for verification'});count+=batch;
      message=`Applied ${count} of ${allowedKeys.size} entries. Each completed batch is saved.`;
      const progress=section.querySelector('[data-import-progress]');if(progress)progress.textContent=message;
     }
