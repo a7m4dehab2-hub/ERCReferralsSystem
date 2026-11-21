@@ -102,6 +102,13 @@ export function classify(row,data,peers=[]){
  return row.kind==='contacts'?(existing?'Fill missing details':'New patient'):'New request — verify details';
 }
 export const isSafe = classification => ['New patient','Fill missing details','New request — verify details'].includes(classification);
+export function applySafeBatch(data,{limit=50,allowedKeys=null}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Choose an import batch size between 1 and 100.');
+ const pending=data.imports.filter(row=>row.status==='pending');
+ const rows=pending.filter(row=>(!allowedKeys||allowedKeys.has(row.key))&&isSafe(classify({...row,fingerprint:''},{...data,imports:[]},pending))).slice(0,limit);
+ for(const row of rows)applySourceRow(data,row);
+ return rows.length;
+}
 export function sourceProblems(row,existing){
  const patient={...existing};
  for(const key of patientKeys)if(clean(row.values[key]))patient[key]=row.values[key];
