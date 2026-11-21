@@ -106,6 +106,7 @@ export function applySafeBatch(data,{limit=50,allowedKeys=null}={}){
  if(!Number.isInteger(limit)||limit<1||limit>100)throw Error('Choose an import batch size between 1 and 100.');
  const pending=data.imports.filter(row=>row.status==='pending');
  const rows=pending.filter(row=>(!allowedKeys||allowedKeys.has(row.key))&&isSafe(classify({...row,fingerprint:''},{...data,imports:[]},pending))).slice(0,limit);
+ if(rows.some(row=>row.kind==='referrals'))rows.splice(10);
  for(const row of rows)applySourceRow(data,row);
  return rows.length;
 }
